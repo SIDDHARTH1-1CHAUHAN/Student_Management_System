@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id       String @id @default(uuid())
+  username String @unique
+}
+
+model Student {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  password     String
+  name         String
+  fatherName   String
+  motherName   String
+  img          String?
+  address      String?
+  birthday     DateTime
+  phone        String
+  email        String?
+  sex          UserSex?
+  bloodType    String?
+  createdAt    DateTime      @default(now())
+  branchId     Int
+  branch       Branch        @relation(fields: [branchId], references: [id])
+  semesterId   Int
+  semester     Semester      @relation(fields: [semesterId], references: [id])
+  attendances  Attendance[]
+  results      Result[]
+  studentExams StudentExam[]
+}
+
+model Teacher {
+  id        String    @id @default(uuid())
+  username  String    @unique
+  password  String
+  name      String
+  email     String?   @unique
+  phone     String?   @unique
+  division  String?
+  createdAt DateTime  @default(now())
+  subjects  Subject[] 
+  lectures  Lectures[]  
+  branches  Branch[]  
+  announcements AnnouncementTeacher[] 
+  results   Result[]
+}
+
+model Registrar {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  name      String
+  email     String?  @unique
+  phone     String?  @unique
+  createdAt DateTime @default(now())
+}
+
+model Semester {
+  id       Int       @id @default(autoincrement())
+  level    Int       
+  students Student[]
+  branchId   Int      // foreign key to Branch
+  branch     Branch   @relation(fields: [branchId], references: [id])
+  subjects Subject[]
+  exams    Exam[]
+}
+
+model StudentExam {
+  id        Int     @id @default(autoincrement())
+  studentId String
+  examId    Int
+  student   Student @relation(fields: [studentId], references: [id])
+  exam      Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  marks     Int?
+}
+
+model Branch {
+  id            Int            @id @default(autoincrement())
+  name          String         
+  capacity      Int
+  lectures      Lectures[]
+  students      Student[]
+  semesters      Semester[]     
+  subjects      Subject[]
+  Exam          Exam[]
+  teachers      Teacher[]
+}
+
+model Subject {
+  id          Int         @id @default(autoincrement())
+  name        String      
+  subjectCode String?
+  type        SubjectType
+  maxMarks    Int?
+  branchId    Int
+  branch      Branch      @relation(fields: [branchId], references: [id])
+  fileUrl     String?
+  semesterId  Int?
+  semester    Semester?   @relation(fields: [semesterId], references: [id])
+  teachers    Teacher[]
+  lectures    Lectures[]
+  results     Result[]
+  exams       Exam[]
+}
+
+model Lectures {
+  id          Int          @id @default(autoincrement())
+  name        String
+  day         Day
+  startTime   DateTime
+  endTime     DateTime
+  subjectId   Int
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  branchId    Int
+  branch      Branch       @relation(fields: [branchId], references: [id])
+  teacherId   String
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  attendances Attendance[]
+  exams       Exam[]
+}
+
+model Exam {
+  id           Int            @id @default(autoincrement())
+  subjectId    Int
+  subject      Subject        @relation(fields: [subjectId], references: [id])
+  examDate     DateTime
+  startTime    DateTime
+  endTime      DateTime
+  semesterId   Int
+  semester     Semester       @relation(fields: [semesterId], references: [id])
+  branchId     Int
+  branch       Branch         @relation(fields: [branchId], references: [id])
+  createdAt    DateTime       @default(now())
+  examSchedule ExamSchedule[]
+  studentExams StudentExam[]
+  Lectures     Lectures?      @relation(fields: [lecturesId], references: [id])
+  lecturesId   Int?
+}
+
+model ExamSchedule {
+  id          Int      @id @default(autoincrement())
+  examId      Int
+  exam        Exam     @relation(fields: [examId], references: [id])
+  date        DateTime
+  location    String
+  invigilator String
+}
+
+model Result {
+  id            Int     @id @default(autoincrement())
+  sessionalExam String?
+  endTerm       Int?
+  overallMark   Int
+  grade         String
+
+  studentId     String
+  student       Student @relation(fields: [studentId], references: [id], map: "Result_studentId_fk")
+
+  subjectId     Int?
+  subject       Subject? @relation(fields: [subjectId], references: [id], map: "Result_subjectId_fk")
+
+  teacherId     String?
+  teacher       Teacher? @relation(fields: [teacherId], references: [id], map: "Result_teacherId_fk")
+  
+  verified      Boolean @default(false)
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+
+model Attendance {
+  id         Int      @id @default(autoincrement())
+  date       DateTime
+  present    Boolean
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id])
+  lecturesId Int
+  lectures   Lectures @relation(fields: [lecturesId], references: [id])
+}
+
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?  
+  fileUrl   String?  
+  type      AnnouncementType @default(GENERAL)
+  teachers  AnnouncementTeacher[]
+  createdAt DateTime @default(now()) 
+  updatedAt DateTime @updatedAt 
+  }
+
+
+
+model AnnouncementTeacher {
+  announcementId Int
+  announcement   Announcement @relation(fields: [announcementId], references: [id])
+  teacherId      String
+  teacher        Teacher      @relation(fields: [teacherId], references: [id])
+
+  @@id([announcementId, teacherId]) 
+}
+
+enum AnnouncementType {
+  GENERAL
+  TEACHER_SPECIFIC
+}
+
+enum SubjectType {
+  THEORY
+  PRACTICAL
+}
+
+enum UserSex {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum Day{
+  MONDAY
+  TUESDAY
+}
